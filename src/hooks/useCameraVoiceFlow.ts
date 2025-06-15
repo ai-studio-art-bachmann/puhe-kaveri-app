@@ -98,29 +98,60 @@ export const useCameraVoiceFlow = (webhookUrl: string) => {
       formData.append('filename', `${fileName}.jpg`);
       formData.append('wantAudio', wantAudio.toString());
 
-      console.log('Uploading photo:', fileName, 'Want audio:', wantAudio);
+      console.log('Uploading photo to n8n webhook:', webhookUrl);
+      console.log('Photo details:', {
+        fileName: `${fileName}.jpg`,
+        fileSize: blob.size,
+        wantAudio: wantAudio
+      });
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('N8N webhook response status:', response.status);
+      console.log('N8N webhook response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        throw new Error(`N8N webhook error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('Server response:', data);
+      // Handle response - n8n webhook might return empty response
+      let data = null;
+      const contentType = response.headers.get('content-type');
       
-      if (wantAudio && data.audioResponse) {
+      if (contentType && contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.log('N8N webhook response text:', responseText);
+        
+        if (responseText.trim()) {
+          try {
+            data = JSON.parse(responseText);
+            console.log('N8N webhook parsed response:', data);
+          } catch (parseError) {
+            console.warn('Failed to parse JSON response, treating as text:', parseError);
+            data = { message: responseText };
+          }
+        } else {
+          console.log('Empty response from n8n webhook - this is normal');
+          data = { success: true };
+        }
+      } else {
+        console.log('Non-JSON response from n8n webhook');
+        data = { success: true };
+      }
+      
+      // Handle audio response if provided
+      if (wantAudio && data && data.audioResponse) {
         setState(prev => ({ ...prev, step: 'playing' }));
         await playAudioResponse(data.audioResponse);
       }
 
-      await speech.speak("Analyysi valmis ja tallennettu");
+      await speech.speak("Kuva lähetetty onnistuneesti");
       toast({
-        title: "Kuva käsitelty",
-        description: `${fileName}.jpg analysoitu ja tallennettu`
+        title: "Kuva lähetetty",
+        description: `${fileName}.jpg lähetetty n8n webhookiin`
       });
       
       resetFlow();
@@ -128,8 +159,8 @@ export const useCameraVoiceFlow = (webhookUrl: string) => {
       console.error('Photo processing failed:', error);
       await speech.speak("Tallennus epäonnistui. Yritä uudelleen.");
       toast({
-        title: "Käsittely epäonnistui",
-        description: "Yritä uudelleen",
+        title: "Lähetys epäonnistui",
+        description: error instanceof Error ? error.message : "Tuntematon virhe",
         variant: "destructive"
       });
       resetFlow();
