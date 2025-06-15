@@ -150,7 +150,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
             console.log('N8N webhook parsed response:', data);
           } catch (parseError) {
             console.warn('Failed to parse JSON response:', parseError);
-            data = { output: responseText };
+            data = { textResponse: responseText };
           }
         } else {
           console.log('Empty response from n8n webhook');
@@ -161,26 +161,32 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         data = { success: true };
       }
       
-      // Handle the analysis response
-      if (data && data.output) {
-        const analysisText = data.output;
+      // Handle the analysis response - fix the field mapping
+      if (data && data.textResponse) {
+        const analysisText = data.textResponse;
         
         console.log('Adding analysis to chat:', analysisText);
         
         // Add the analysis to the chat safely
-        addMessage({
+        const analysisMessage = {
           id: `msg-${Date.now()}`,
-          type: 'assistant',
+          type: 'assistant' as const,
           content: analysisText,
-          audioUrl: data.audioUrl,
           timestamp: new Date()
-        });
+        };
+
+        // Add audio URL if provided
+        if (data.audioResponse) {
+          analysisMessage.audioUrl = `data:audio/mpeg;base64,${data.audioResponse}`;
+        }
+
+        addMessage(analysisMessage);
         
         // Handle audio response if provided - with better error handling
-        if (data.audioUrl) {
+        if (data.audioResponse) {
           setState(prev => ({ ...prev, step: 'playing' }));
           try {
-            await playAudioResponse(data.audioUrl);
+            await playAudioResponse(data.audioResponse);
           } catch (audioError) {
             console.warn('Audio playback failed:', audioError);
             // Continue without audio
@@ -194,7 +200,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
           timestamp: new Date()
         });
       } else {
-        // Fallback if no output field
+        // Fallback if no textResponse field
         addMessage({
           id: `msg-${Date.now()}`,
           type: 'system',
