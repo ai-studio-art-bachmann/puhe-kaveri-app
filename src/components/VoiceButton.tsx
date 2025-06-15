@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { VoiceState } from '@/types/voice';
 import { cn } from '@/lib/utils';
 import { getTranslations } from '@/translations';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface VoiceButtonProps {
   voiceState: VoiceState;
@@ -29,57 +30,57 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
     case 'idle':
       return {
         text: t.startConversation,
-        bgColor: 'bg-primary',
-        hoverColor: 'hover:bg-primary/90',
-        iconColor: 'text-primary-foreground',
+        bgColor: 'bg-slate-800',
+        hoverColor: 'hover:bg-slate-700',
+        iconColor: 'text-white',
         pulse: false
       };
     case 'greeting':
       return {
         text: t.greetingInProgress,
-        bgColor: 'bg-blue-500',
-        hoverColor: 'hover:bg-blue-600',
+        bgColor: 'bg-blue-600',
+        hoverColor: 'hover:bg-blue-700',
         iconColor: 'text-white',
         pulse: true
       };
     case 'recording':
       return {
         text: t.listening,
-        bgColor: 'bg-red-500',
-        hoverColor: 'hover:bg-red-600',
+        bgColor: 'bg-red-600',
+        hoverColor: 'hover:bg-red-700',
         iconColor: 'text-white',
         pulse: true
       };
     case 'sending':
       return {
         text: t.sending,
-        bgColor: 'bg-yellow-500',
-        hoverColor: 'hover:bg-yellow-600',
+        bgColor: 'bg-yellow-600',
+        hoverColor: 'hover:bg-yellow-700',
         iconColor: 'text-white',
         pulse: false
       };
     case 'waiting':
       return {
         text: t.waitingResponse,
-        bgColor: 'bg-blue-500',
-        hoverColor: 'hover:bg-blue-600',
+        bgColor: 'bg-blue-600',
+        hoverColor: 'hover:bg-blue-700',
         iconColor: 'text-white',
         pulse: true
       };
     case 'playing':
       return {
         text: t.playingResponse,
-        bgColor: 'bg-green-500',
-        hoverColor: 'hover:bg-green-600',
+        bgColor: 'bg-green-600',
+        hoverColor: 'hover:bg-green-700',
         iconColor: 'text-white',
         pulse: false
       };
     default:
       return {
         text: t.startConversation,
-        bgColor: 'bg-primary',
-        hoverColor: 'hover:bg-primary/90',
-        iconColor: 'text-primary-foreground',
+        bgColor: 'bg-slate-800',
+        hoverColor: 'hover:bg-slate-700',
+        iconColor: 'text-white',
         pulse: false
       };
   }
@@ -97,35 +98,53 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
   const isDisabled = disabled || (voiceState.status !== 'idle' && !isWaitingForClick);
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <Button
-        onClick={onPress}
-        disabled={isDisabled}
-        size="lg"
-        className={cn(
-          'rounded-full shadow-lg transition-all duration-200 ease-in-out',
-          buttonState.bgColor,
-          buttonState.hoverColor,
-          'hover:scale-105 active:scale-95',
-          buttonState.pulse && 'animate-pulse',
-          isDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
-        )}
-        style={{ width: '8rem', height: '8rem' }}
-      >
-        <div className="flex flex-col items-center justify-center space-y-1">
-          <Mic className={cn('w-8 h-8', buttonState.iconColor)} />
-          <span className="text-xs font-medium">Ääni</span>
-        </div>
-      </Button>
-      
-      <p className="text-sm font-medium text-muted-foreground text-center max-w-xs">
-        {buttonState.text}
-      </p>
+    <div className="w-full max-w-md mx-auto space-y-6">
+      {/* Status Card */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center space-y-2">
+            <p className="font-medium text-slate-700">{buttonState.text}</p>
+            {!navigator.onLine && (
+              <div className="flex items-center justify-center space-x-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span className="text-sm font-medium">Offline-tila</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Voice Button - matching camera button size and style */}
+      <div className="flex flex-col items-center space-y-4">
+        <Button
+          onClick={onPress}
+          disabled={isDisabled}
+          size="lg"
+          className={cn(
+            'rounded-full shadow-lg transition-all duration-200 ease-in-out',
+            buttonState.bgColor,
+            buttonState.hoverColor,
+            'hover:scale-105 active:scale-95',
+            buttonState.pulse && 'animate-pulse',
+            isDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
+          )}
+          style={{ width: '6.5rem', height: '6.5rem' }}
+        >
+          <div className="flex flex-col items-center space-y-2">
+            <Mic size={48} className={buttonState.iconColor} />
+            <span className="text-sm font-medium text-white">Ääni</span>
+          </div>
+        </Button>
+      </div>
       
       {voiceState.error && (
-        <div className="text-sm text-destructive text-center max-w-xs px-3 py-2 bg-destructive/10 rounded border border-destructive/20">
-          {voiceState.error}
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-sm text-destructive text-center bg-destructive/10 rounded p-3 border border-destructive/20">
+              {voiceState.error}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
