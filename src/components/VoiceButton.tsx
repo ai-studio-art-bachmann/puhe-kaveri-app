@@ -101,17 +101,21 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
       <Button
         onClick={onPress}
         disabled={isDisabled}
+        size="lg"
         className={cn(
-          'w-32 h-32 rounded-full border-2 transition-all duration-200 shadow-lg hover:shadow-xl',
+          'rounded-full bg-primary hover:bg-primary/90 shadow-lg',
           buttonState.bgColor,
           buttonState.borderColor,
           'hover:scale-105',
           buttonState.pulse && 'animate-pulse',
           isDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
         )}
-        size="lg"
+        style={{ width: '6.5rem', height: '6.5rem' }}
       >
-        <Mic className={cn('w-16 h-16', buttonState.iconColor)} />
+        <div className="flex flex-col items-center space-y-2">
+          <Mic className={cn('w-12 h-12', buttonState.iconColor)} />
+          <span className="text-sm font-medium">Ääni</span>
+        </div>
       </Button>
       
       <p className="text-base font-medium text-gray-700 text-center max-w-xs">
