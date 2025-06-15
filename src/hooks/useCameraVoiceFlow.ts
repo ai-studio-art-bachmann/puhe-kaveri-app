@@ -167,10 +167,10 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         
         console.log('Adding analysis to chat:', analysisText);
         
-        // Add the analysis to the chat safely
-        const analysisMessage = {
+        // Create the analysis message with proper typing
+        const analysisMessage: any = {
           id: `msg-${Date.now()}`,
-          type: 'assistant' as const,
+          type: 'assistant',
           content: analysisText,
           timestamp: new Date()
         };
