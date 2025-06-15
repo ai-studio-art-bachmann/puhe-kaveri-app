@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'tyokalu-app-v2';
+const CACHE_NAME = 'tyokalu-app-v3';
 const STATIC_CACHE_URLS = [
   '/',
   '/index.html',
@@ -56,9 +56,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip external requests and chrome-extension requests
+  // Skip external requests, chrome-extension requests, and data URLs
   if (!event.request.url.startsWith(self.location.origin) || 
-      event.request.url.startsWith('chrome-extension://')) {
+      event.request.url.startsWith('chrome-extension://') ||
+      event.request.url.startsWith('data:') ||
+      event.request.url.startsWith('blob:')) {
+    return;
+  }
+
+  // Skip if URL contains certain patterns that cause issues
+  if (event.request.url.includes('extension') || 
+      event.request.url.includes('nif2_main.js')) {
     return;
   }
 
