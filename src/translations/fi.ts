@@ -1,3 +1,4 @@
+
 import { Translations } from './types';
 
 export const fiTranslations: Translations = {
@@ -47,9 +48,9 @@ export const fiTranslations: Translations = {
   cameraOff: "Kamera ei ole päällä",
   capturedPhotoAlt: "Kaapattu kuva",
   
-  imageReceived: "Pilt vastu võetud", // Note: This was "Pilt vastu võetud" in FI, seems like a copy-paste from ET. Assuming it should be Finnish. Let's keep it as is from original for now, user can correct.
-  fileReceived: "Fail vastu võetud", // Same as above.
-  readyForClick: "Valmis klõpsamiseks", // Same as above.
+  imageReceived: "Kuva vastaanotettu",
+  fileReceived: "Tiedosto vastaanotettu",
+  readyForClick: "Valmis napsautukseen",
   startConversation: "Aloita keskustelu",
   greetingInProgress: "Tervehdys käynnissä...",
   listening: "Kuuntelen...",
