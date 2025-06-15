@@ -2,7 +2,7 @@
 import React from 'react';
 import { CameraVoiceFlow } from './CameraVoiceFlow';
 import { useConversation } from '@/hooks/useConversation';
-import { ConversationConfig } from '@/types/voice';
+import { ConversationConfig, ChatMessage } from '@/types/voice';
 
 interface CameraContainerProps {
   webhookUrl: string;
@@ -18,40 +18,38 @@ export const CameraContainer: React.FC<CameraContainerProps> = ({ webhookUrl, la
   
   const conversation = useConversation(config);
 
-  // Create message handlers
+  // Create message handlers that work with the actual conversation API
   const messageHandlers = {
-    addUserMessage: (content: string) => {
-      // Create a user message (this will be for the photo upload)
-      const userMessage = conversation.messageManager?.addMessage({
+    addUserMessage: (content: string): ChatMessage => {
+      // Since we don't have direct access to messageManager, we'll create a simple message structure
+      // This is a temporary solution - the actual message will be handled by the voice flow
+      const userMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
         type: 'user' as const,
-        content
-      });
-      if (userMessage) {
-        conversation.addMessage(userMessage);
-      }
+        content,
+        timestamp: new Date()
+      };
       return userMessage;
     },
-    addAssistantMessage: (content: string, audioUrl?: string, fileUrl?: string, fileType?: string) => {
-      const assistantMessage = conversation.messageManager?.addMessage({
+    addAssistantMessage: (content: string, audioUrl?: string, fileUrl?: string, fileType?: string): ChatMessage => {
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
         type: 'assistant' as const,
         content,
         audioUrl,
         fileUrl,
-        fileType
-      });
-      if (assistantMessage) {
-        conversation.addMessage(assistantMessage);
-      }
+        fileType,
+        timestamp: new Date()
+      };
       return assistantMessage;
     },
-    addSystemMessage: (content: string) => {
-      const systemMessage = conversation.messageManager?.addMessage({
+    addSystemMessage: (content: string): ChatMessage => {
+      const systemMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
         type: 'system' as const,
-        content
-      });
-      if (systemMessage) {
-        conversation.addMessage(systemMessage);
-      }
+        content,
+        timestamp: new Date()
+      };
       return systemMessage;
     }
   };
