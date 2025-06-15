@@ -1,16 +1,23 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useCameraVoiceFlow } from '@/hooks/useCameraVoiceFlow';
 import { Mic, Camera, RotateCcw, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ChatMessage } from '@/types/voice';
+
+interface MessageHandlers {
+  addUserMessage: (content: string) => ChatMessage;
+  addAssistantMessage: (content: string, audioUrl?: string, fileUrl?: string, fileType?: string) => ChatMessage;
+  addSystemMessage: (content: string) => ChatMessage;
+}
 
 interface CameraVoiceFlowProps {
   webhookUrl: string;
+  messageHandlers?: MessageHandlers;
 }
 
-export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl }) => {
-  const flow = useCameraVoiceFlow(webhookUrl);
+export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, messageHandlers }) => {
+  const flow = useCameraVoiceFlow(webhookUrl, messageHandlers);
 
   const getStepDescription = () => {
     switch (flow.step) {
