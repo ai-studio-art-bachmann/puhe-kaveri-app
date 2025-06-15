@@ -1,23 +1,45 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCameraVoiceFlow } from '@/hooks/useCameraVoiceFlow';
+import { FilenameInput } from './FilenameInput';
 import { Mic, Camera, RotateCcw, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ChatMessage } from '@/types/voice';
-
-interface MessageHandlers {
-  addUserMessage: (content: string) => ChatMessage;
-  addAssistantMessage: (content: string, audioUrl?: string, fileUrl?: string, fileType?: string) => ChatMessage;
-  addSystemMessage: (content: string) => ChatMessage;
-}
 
 interface CameraVoiceFlowProps {
   webhookUrl: string;
-  messageHandlers?: MessageHandlers;
+  conversation: any; // conversation object from useConversation
 }
 
-export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, messageHandlers }) => {
-  const flow = useCameraVoiceFlow(webhookUrl, messageHandlers);
+export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, conversation }) => {
+  const [showFilenameInput, setShowFilenameInput] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<Blob | null>(null);
+  
+  const flow = useCameraVoiceFlow(webhookUrl, conversation);
+
+  const handlePhotoCapture = async () => {
+    try {
+      const blob = await flow.capturePhoto();
+      setPendingPhoto(blob);
+      setShowFilenameInput(true);
+    } catch (error) {
+      console.error('Photo capture failed:', error);
+    }
+  };
+
+  const handleFilenameSubmit = (fileName: string) => {
+    if (pendingPhoto) {
+      flow.processPhotoWithFilename(pendingPhoto, fileName);
+      setPendingPhoto(null);
+      setShowFilenameInput(false);
+    }
+  };
+
+  const handleFilenameCancel = () => {
+    setPendingPhoto(null);
+    setShowFilenameInput(false);
+    flow.resetFlow();
+  };
 
   const getStepDescription = () => {
     switch (flow.step) {
@@ -26,13 +48,7 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, me
       case 'camera':
         return 'Kamera on päällä - ota kuva';
       case 'captured':
-        return 'Kuva otettu - aloitetaan ääniohjaus';
-      case 'asking-name':
-        return 'Kysyn tiedoston nimeä...';
-      case 'listening':
-        return 'Kuuntelen vastaustasi...';
-      case 'asking-choice':
-        return 'Kysyn analyysitoivetta...';
+        return 'Kuva otettu - anna failile nimi';
       case 'processing':
         return 'Käsittelen kuvaa...';
       case 'playing':
@@ -43,6 +59,10 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, me
   };
 
   const getMainButton = () => {
+    if (showFilenameInput) {
+      return null; // FilenameInput handles this
+    }
+
     switch (flow.step) {
       case 'idle':
         return (
@@ -58,35 +78,12 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, me
       case 'camera':
         return (
           <Button
-            onClick={flow.capturePhoto}
+            onClick={handlePhotoCapture}
             className="w-full h-20 rounded-full shadow-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-lg font-semibold"
           >
             <Camera className="mr-2" size={24} />
             Ota kuva
           </Button>
-        );
-      
-      case 'captured':
-        return (
-          <div className="w-full h-20 rounded-full shadow-lg bg-gradient-to-r from-yellow-500 to-yellow-600 flex items-center justify-center">
-            <div className="animate-pulse text-white font-semibold">
-              Valmistaudun ääniohjauksen...
-            </div>
-          </div>
-        );
-      
-      case 'asking-name':
-      case 'listening':
-      case 'asking-choice':
-        return (
-          <div className="w-full h-20 rounded-full shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center">
-            <div className={cn(
-              "w-16 h-16 bg-white rounded-full flex items-center justify-center",
-              "animate-pulse"
-            )}>
-              <Mic size={32} className="text-orange-600" />
-            </div>
-          </div>
         );
       
       case 'processing':
@@ -155,13 +152,23 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({ webhookUrl, me
         )}
       </div>
 
+      {/* Filename Input */}
+      {showFilenameInput && (
+        <FilenameInput
+          onSubmit={handleFilenameSubmit}
+          onCancel={handleFilenameCancel}
+        />
+      )}
+
       {/* Main Action Button */}
-      <div className="w-full max-w-md">
-        {getMainButton()}
-      </div>
+      {!showFilenameInput && (
+        <div className="w-full max-w-md">
+          {getMainButton()}
+        </div>
+      )}
 
       {/* Reset Button */}
-      {flow.step !== 'idle' && (
+      {flow.step !== 'idle' && !showFilenameInput && (
         <Button
           onClick={flow.resetFlow}
           variant="outline"

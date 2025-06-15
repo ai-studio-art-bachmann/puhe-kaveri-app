@@ -1,26 +1,18 @@
+
 import { useState, useCallback } from 'react';
 import { useCamera } from './useCamera';
-import { useSpeech } from './useSpeech';
 import { useOfflineStorage } from './useOfflineStorage';
 import { toast } from '@/hooks/use-toast';
-import { ChatMessage } from '@/types/voice';
 
 interface CameraVoiceFlowState {
-  step: 'idle' | 'camera' | 'captured' | 'asking-name' | 'listening' | 'asking-choice' | 'processing' | 'playing';
+  step: 'idle' | 'camera' | 'captured' | 'processing' | 'playing';
   photoBlob: Blob | null;
   fileName: string;
   isOnline: boolean;
 }
 
-interface MessageHandlers {
-  addUserMessage: (content: string) => ChatMessage;
-  addAssistantMessage: (content: string, audioUrl?: string, fileUrl?: string, fileType?: string) => ChatMessage;
-  addSystemMessage: (content: string) => ChatMessage;
-}
-
-export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: MessageHandlers) => {
+export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
   const camera = useCamera();
-  const speech = useSpeech();
   const offlineStorage = useOfflineStorage();
   
   const [state, setState] = useState<CameraVoiceFlowState>({
@@ -35,8 +27,14 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       setState(prev => ({ ...prev, step: 'camera' }));
       await camera.open();
       
-      if (messageHandlers) {
-        messageHandlers.addSystemMessage("Kamera käivitatud - ota kuva");
+      // Add system message to chat
+      if (conversation?.messages) {
+        conversation.conversationState.addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'system',
+          content: "Kamera käivitatud - ota kuva",
+          timestamp: new Date()
+        });
       }
     } catch (error) {
       console.error('Failed to start camera:', error);
@@ -47,7 +45,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       });
       setState(prev => ({ ...prev, step: 'idle' }));
     }
-  }, [camera, messageHandlers]);
+  }, [camera, conversation]);
 
   const capturePhoto = useCallback(async () => {
     try {
@@ -56,32 +54,20 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       setState(prev => ({ ...prev, step: 'captured', photoBlob: blob }));
       camera.close();
       
-      if (messageHandlers) {
-        // Create a temporary URL for the image to display in chat
+      // Add user message with image to chat
+      if (conversation?.messages) {
         const imageUrl = URL.createObjectURL(blob);
-        messageHandlers.addUserMessage("Kuva võetud").fileUrl = imageUrl;
-        messageHandlers.addUserMessage("").fileType = "image/jpeg";
+        conversation.conversationState.addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'user',
+          content: "Kuva võetud",
+          fileUrl: imageUrl,
+          fileType: "image/jpeg",
+          timestamp: new Date()
+        });
       }
       
-      // Start the voice interaction after a short delay
-      setTimeout(async () => {
-        try {
-          setState(prev => ({ ...prev, step: 'asking-name' }));
-          const fileName = await speech.ask("Anna tiedostolle nimi");
-          
-          setState(prev => ({ ...prev, fileName, step: 'asking-choice' }));
-          
-          // Ask if user wants to hear analysis now
-          const choice = await speech.ask("Haluatko kuulla analyysin nyt? Sano kyllä tai ei");
-          const wantAudio = choice.toLowerCase().includes('kyllä') || choice.toLowerCase().includes('joo') || choice.toLowerCase().includes('yes');
-          
-          await processPhoto(blob, fileName, wantAudio);
-        } catch (error) {
-          console.error('Voice interaction failed:', error);
-          await speech.speak("Äänitunnistus epäonnistui. Jatketaan ilman nimeä.");
-          await processPhoto(blob, `kuva_${Date.now()}`, false);
-        }
-      }, 500);
+      return blob;
     } catch (error) {
       console.error('Photo capture failed:', error);
       toast({
@@ -90,21 +76,37 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
         variant: "destructive"
       });
       setState(prev => ({ ...prev, step: 'camera' }));
+      throw error;
     }
-  }, [camera, speech, messageHandlers]);
+  }, [camera, conversation]);
 
-  const processPhoto = useCallback(async (blob: Blob, fileName: string, wantAudio: boolean) => {
-    setState(prev => ({ ...prev, step: 'processing' }));
+  const processPhotoWithFilename = useCallback(async (blob: Blob, fileName: string) => {
+    setState(prev => ({ ...prev, step: 'processing', fileName }));
     
-    if (messageHandlers) {
-      messageHandlers.addSystemMessage(`Analüüsin pilti: ${fileName}.jpg...`);
+    // Add system message to chat
+    if (conversation?.messages) {
+      conversation.conversationState.addMessage({
+        id: `msg-${Date.now()}`,
+        type: 'system',
+        content: `Analüüsin pilti: ${fileName}.jpg...`,
+        timestamp: new Date()
+      });
     }
     
     try {
       if (!navigator.onLine) {
         // Offline mode - save for later sync
-        await offlineStorage.saveOffline(blob, fileName, wantAudio);
-        await speech.speak("Kuva tallennettu offline-tilassa. Lähetetään kun verkko palaa.");
+        await offlineStorage.saveOffline(blob, fileName, false);
+        
+        if (conversation?.messages) {
+          conversation.conversationState.addMessage({
+            id: `msg-${Date.now()}`,
+            type: 'system',
+            content: "Kuva tallennettu offline-tilassa. Lähetetään kun verkko palaa.",
+            timestamp: new Date()
+          });
+        }
+        
         toast({
           title: "Tallennettu offline-tilassa",
           description: "Kuva lähetetään kun verkko palaa"
@@ -117,13 +119,11 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       const formData = new FormData();
       formData.append('file', blob, `${fileName}.jpg`);
       formData.append('filename', `${fileName}.jpg`);
-      formData.append('wantAudio', wantAudio.toString());
 
       console.log('Uploading photo to n8n webhook:', webhookUrl);
       console.log('Photo details:', {
         fileName: `${fileName}.jpg`,
-        fileSize: blob.size,
-        wantAudio: wantAudio
+        fileSize: blob.size
       });
 
       const response = await fetch(webhookUrl, {
@@ -132,13 +132,12 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       });
 
       console.log('N8N webhook response status:', response.status);
-      console.log('N8N webhook response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         throw new Error(`N8N webhook error: ${response.status} ${response.statusText}`);
       }
 
-      // Handle response - n8n webhook might return empty response
+      // Handle response
       let data = null;
       const contentType = response.headers.get('content-type');
       
@@ -151,11 +150,11 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
             data = JSON.parse(responseText);
             console.log('N8N webhook parsed response:', data);
           } catch (parseError) {
-            console.warn('Failed to parse JSON response, treating as text:', parseError);
-            data = { message: responseText };
+            console.warn('Failed to parse JSON response:', parseError);
+            data = { output: responseText };
           }
         } else {
-          console.log('Empty response from n8n webhook - this is normal');
+          console.log('Empty response from n8n webhook');
           data = { success: true };
         }
       } else {
@@ -167,31 +166,42 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       if (data && data.output) {
         const analysisText = data.output;
         
+        console.log('Adding analysis to chat:', analysisText);
+        
         // Add the analysis to the chat
-        if (messageHandlers) {
-          const audioUrl = data.audioUrl || data.audioResponse;
-          messageHandlers.addAssistantMessage(analysisText, audioUrl);
+        if (conversation?.messages) {
+          conversation.conversationState.addMessage({
+            id: `msg-${Date.now()}`,
+            type: 'assistant',
+            content: analysisText,
+            audioUrl: data.audioUrl,
+            timestamp: new Date()
+          });
         }
         
-        // Handle audio response if provided and requested
-        if (wantAudio) {
+        // Handle audio response if provided
+        if (data.audioUrl) {
           setState(prev => ({ ...prev, step: 'playing' }));
-          
-          if (data.audioUrl || data.audioResponse) {
-            await playAudioResponse(data.audioUrl || data.audioResponse);
-          } else {
-            // If no audio provided by n8n, use text-to-speech
-            await speech.speak(analysisText);
-          }
+          await playAudioResponse(data.audioUrl);
         }
         
-        await speech.speak("Analüüs valmis");
+        if (conversation?.messages) {
+          conversation.conversationState.addMessage({
+            id: `msg-${Date.now()}`,
+            type: 'system',
+            content: "Analüüs valmis",
+            timestamp: new Date()
+          });
+        }
       } else {
         // Fallback if no output field
-        await speech.speak("Kuva lähetetty onnistuneesti");
-        
-        if (messageHandlers) {
-          messageHandlers.addSystemMessage("Kuva analüüsitud ja lähetetud");
+        if (conversation?.messages) {
+          conversation.conversationState.addMessage({
+            id: `msg-${Date.now()}`,
+            type: 'system',
+            content: "Kuva lähetetty onnistuneesti",
+            timestamp: new Date()
+          });
         }
       }
 
@@ -203,10 +213,14 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       resetFlow();
     } catch (error) {
       console.error('Photo processing failed:', error);
-      await speech.speak("Tallennus epäonnistui. Yritä uudelleen.");
       
-      if (messageHandlers) {
-        messageHandlers.addSystemMessage("Viga: Kuva analüüs epäonnistus");
+      if (conversation?.messages) {
+        conversation.conversationState.addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'system',
+          content: `Viga: Kuva analüüs epäonnistus - ${error instanceof Error ? error.message : "Tuntematon virhe"}`,
+          timestamp: new Date()
+        });
       }
       
       toast({
@@ -216,21 +230,17 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
       });
       resetFlow();
     }
-  }, [webhookUrl, offlineStorage, speech, messageHandlers]);
+  }, [webhookUrl, offlineStorage, conversation]);
 
   const playAudioResponse = useCallback(async (audioData: string) => {
     try {
-      // Handle different audio data formats
       let audioUrl = audioData;
       
       if (audioData.startsWith('data:audio/')) {
-        // Base64 data URI - use directly
         audioUrl = audioData;
       } else if (audioData.startsWith('blob:')) {
-        // Blob URL - use directly
         audioUrl = audioData;
       } else {
-        // Assume base64 string, convert to data URI
         audioUrl = `data:audio/mpeg;base64,${audioData}`;
       }
       
@@ -241,7 +251,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
         
         return new Promise<void>((resolve) => {
           audio.onended = () => resolve();
-          audio.onerror = () => resolve(); // Continue even if audio fails
+          audio.onerror = () => resolve();
         });
       } catch (autoplayError) {
         console.warn('Autoplay blocked:', autoplayError);
@@ -271,6 +281,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, messageHandlers?: Message
     canvasRef: camera.canvasRef,
     startFlow,
     capturePhoto,
+    processPhotoWithFilename,
     resetFlow
   };
 };
