@@ -3,6 +3,7 @@ import React from 'react';
 import { CameraVoiceFlow } from './CameraVoiceFlow';
 import { useConversation } from '@/hooks/useConversation';
 import { ConversationConfig } from '@/types/voice';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface CameraContainerProps {
   webhookUrl: string;
@@ -10,7 +11,6 @@ interface CameraContainerProps {
 }
 
 export const CameraContainer: React.FC<CameraContainerProps> = ({ webhookUrl, language }) => {
-  // Create a minimal config for conversation integration
   const config: ConversationConfig = {
     language,
     webhookUrl
@@ -19,7 +19,7 @@ export const CameraContainer: React.FC<CameraContainerProps> = ({ webhookUrl, la
   const conversation = useConversation(config);
 
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div className="w-full max-w-md mx-auto">
       <CameraVoiceFlow 
         webhookUrl={webhookUrl} 
         conversation={conversation}

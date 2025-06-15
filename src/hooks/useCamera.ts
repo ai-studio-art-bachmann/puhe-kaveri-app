@@ -1,3 +1,4 @@
+
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -9,44 +10,63 @@ export const useCamera = () => {
 
   const open = useCallback(async () => {
     try {
-      // Close any existing stream first
+      // Sulge kõik olemasolevad vood enne uue avamist
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log('Stopping existing track:', track.kind);
+        });
         streamRef.current = null;
+        setIsOpen(false);
+        
+        // Anna veidi aega kaamera sulgemiseks
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       console.log('Requesting camera access...');
       
-      // Try with different constraint configurations
-      let stream: MediaStream;
-      
-      try {
-        // First try with environment camera (back camera on mobile)
-        stream = await navigator.mediaDevices.getUserMedia({ 
+      // Proovi erinevaid seadeid
+      const constraints = [
+        { 
           video: { 
             facingMode: "environment",
             width: { ideal: 1280, max: 1920 },
             height: { ideal: 720, max: 1080 }
           } 
-        });
-      } catch (envError) {
-        console.log('Environment camera failed, trying user camera:', envError);
+        },
+        { 
+          video: { 
+            facingMode: "user",
+            width: { ideal: 640, max: 1280 },
+            height: { ideal: 480, max: 720 }
+          } 
+        },
+        { video: true }
+      ];
+
+      let stream: MediaStream | null = null;
+      let lastError: Error | null = null;
+
+      for (const constraint of constraints) {
         try {
-          // Fallback to user camera (front camera)
-          stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              facingMode: "user",
-              width: { ideal: 640, max: 1280 },
-              height: { ideal: 480, max: 720 }
-            } 
-          });
-        } catch (userError) {
-          console.log('User camera failed, trying basic constraints:', userError);
-          // Final fallback - basic video only
-          stream = await navigator.mediaDevices.getUserMedia({ 
-            video: true
-          });
+          console.log('Trying constraint:', constraint);
+          stream = await navigator.mediaDevices.getUserMedia(constraint);
+          console.log('Camera access successful with constraint:', constraint);
+          break;
+        } catch (error) {
+          console.log('Failed with constraint:', constraint, error);
+          lastError = error as Error;
+          
+          // Kui kaamera on kasutuses, oota ja proovi uuesti
+          if ((error as Error).name === 'NotReadableError') {
+            console.log('Camera busy, waiting before retry...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
+      }
+
+      if (!stream) {
+        throw lastError || new Error('No camera access possible');
       }
       
       streamRef.current = stream;
@@ -55,7 +75,7 @@ export const useCamera = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Wait for video to be ready
+        // Oota video valmidust
         await new Promise<void>((resolve, reject) => {
           if (!videoRef.current) {
             reject(new Error('Video element not available'));
@@ -82,40 +102,41 @@ export const useCamera = () => {
           video.addEventListener('loadedmetadata', onLoadedMetadata);
           video.addEventListener('error', onError);
           
-          // Set a timeout as additional safety
+          // Timeout kaitseks
           setTimeout(() => {
             if (!isOpen) {
               video.removeEventListener('loadedmetadata', onLoadedMetadata);
               video.removeEventListener('error', onError);
               reject(new Error('Video loading timeout'));
             }
-          }, 5000);
+          }, 10000);
         });
       }
     } catch (error) {
       console.error('Camera open failed:', error);
       
-      // Cleanup on failure
+      // Cleanup ebaõnnestumisel
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      setIsOpen(false);
       
-      // Provide specific error messages
-      let errorMessage = 'Kamera ei käivitu';
-      let description = 'Tarkista kameran käyttöoikeudet';
+      // Konkreetsed veateated
+      let errorMessage = 'Kaamera ei käivitu';
+      let description = 'Kontrolli kaamera õigusi';
       
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
-          description = 'Kamera kasutamise luba on vaja anda';
+          description = 'Kaamera kasutamise luba tuleb anda';
         } else if (error.name === 'NotFoundError') {
-          description = 'Kameraid ei leitud';
+          description = 'Kaamerat ei leitud';
         } else if (error.name === 'NotReadableError') {
-          description = 'Kamera on juba kasutuses või ei ole kättesaadav';
+          description = 'Kaamera on juba kasutuses või pole kättesaadav. Proovi lehte uuesti laadida.';
         } else if (error.name === 'OverconstrainedError') {
-          description = 'Kamera ei toeta nõutud seadeid';
+          description = 'Kaamera ei toeta nõutud seadeid';
         } else if (error.name === 'SecurityError') {
-          description = 'Turvapoliitika blokeerib kamera kasutamise';
+          description = 'Turvapoliitika blokeerib kaamera kasutamise';
         }
       }
       
