@@ -23,7 +23,6 @@ export const CameraContainer: React.FC<CameraContainerProps> = ({ webhookUrl, la
       <CameraVoiceFlow 
         webhookUrl={webhookUrl} 
         conversation={conversation}
-        conversationState={conversation}
       />
     </div>
   );

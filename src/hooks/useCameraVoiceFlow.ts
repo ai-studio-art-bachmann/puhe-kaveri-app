@@ -22,20 +22,25 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
     isOnline: navigator.onLine
   });
 
+  const addMessage = useCallback((message: any) => {
+    // Safely add message if conversation is available
+    if (conversation?.messages && typeof conversation.messages.push === 'function') {
+      conversation.messages.push(message);
+    }
+  }, [conversation]);
+
   const startFlow = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, step: 'camera' }));
       await camera.open();
       
-      // Add system message to chat
-      if (conversation?.messages) {
-        conversation.conversationState.addMessage({
-          id: `msg-${Date.now()}`,
-          type: 'system',
-          content: "Kamera käivitatud - ota kuva",
-          timestamp: new Date()
-        });
-      }
+      // Add system message to chat safely
+      addMessage({
+        id: `msg-${Date.now()}`,
+        type: 'system',
+        content: "Kamera käivitatud - ota kuva",
+        timestamp: new Date()
+      });
     } catch (error) {
       console.error('Failed to start camera:', error);
       toast({
@@ -45,7 +50,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       });
       setState(prev => ({ ...prev, step: 'idle' }));
     }
-  }, [camera, conversation]);
+  }, [camera, addMessage]);
 
   const capturePhoto = useCallback(async () => {
     try {
@@ -54,18 +59,16 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       setState(prev => ({ ...prev, step: 'captured', photoBlob: blob }));
       camera.close();
       
-      // Add user message with image to chat
-      if (conversation?.messages) {
-        const imageUrl = URL.createObjectURL(blob);
-        conversation.conversationState.addMessage({
-          id: `msg-${Date.now()}`,
-          type: 'user',
-          content: "Kuva võetud",
-          fileUrl: imageUrl,
-          fileType: "image/jpeg",
-          timestamp: new Date()
-        });
-      }
+      // Add user message with image to chat safely
+      const imageUrl = URL.createObjectURL(blob);
+      addMessage({
+        id: `msg-${Date.now()}`,
+        type: 'user',
+        content: "Kuva võetud",
+        fileUrl: imageUrl,
+        fileType: "image/jpeg",
+        timestamp: new Date()
+      });
       
       return blob;
     } catch (error) {
@@ -78,34 +81,30 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       setState(prev => ({ ...prev, step: 'camera' }));
       throw error;
     }
-  }, [camera, conversation]);
+  }, [camera, addMessage]);
 
   const processPhotoWithFilename = useCallback(async (blob: Blob, fileName: string) => {
     setState(prev => ({ ...prev, step: 'processing', fileName }));
     
-    // Add system message to chat
-    if (conversation?.messages) {
-      conversation.conversationState.addMessage({
-        id: `msg-${Date.now()}`,
-        type: 'system',
-        content: `Analüüsin pilti: ${fileName}.jpg...`,
-        timestamp: new Date()
-      });
-    }
+    // Add system message to chat safely
+    addMessage({
+      id: `msg-${Date.now()}`,
+      type: 'system',
+      content: `Analüüsin pilti: ${fileName}.jpg...`,
+      timestamp: new Date()
+    });
     
     try {
       if (!navigator.onLine) {
         // Offline mode - save for later sync
         await offlineStorage.saveOffline(blob, fileName, false);
         
-        if (conversation?.messages) {
-          conversation.conversationState.addMessage({
-            id: `msg-${Date.now()}`,
-            type: 'system',
-            content: "Kuva tallennettu offline-tilassa. Lähetetään kun verkko palaa.",
-            timestamp: new Date()
-          });
-        }
+        addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'system',
+          content: "Kuva tallennettu offline-tilassa. Lähetetään kun verkko palaa.",
+          timestamp: new Date()
+        });
         
         toast({
           title: "Tallennettu offline-tilassa",
@@ -168,41 +167,40 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         
         console.log('Adding analysis to chat:', analysisText);
         
-        // Add the analysis to the chat
-        if (conversation?.messages) {
-          conversation.conversationState.addMessage({
-            id: `msg-${Date.now()}`,
-            type: 'assistant',
-            content: analysisText,
-            audioUrl: data.audioUrl,
-            timestamp: new Date()
-          });
-        }
+        // Add the analysis to the chat safely
+        addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'assistant',
+          content: analysisText,
+          audioUrl: data.audioUrl,
+          timestamp: new Date()
+        });
         
-        // Handle audio response if provided
+        // Handle audio response if provided - with better error handling
         if (data.audioUrl) {
           setState(prev => ({ ...prev, step: 'playing' }));
-          await playAudioResponse(data.audioUrl);
+          try {
+            await playAudioResponse(data.audioUrl);
+          } catch (audioError) {
+            console.warn('Audio playback failed:', audioError);
+            // Continue without audio
+          }
         }
         
-        if (conversation?.messages) {
-          conversation.conversationState.addMessage({
-            id: `msg-${Date.now()}`,
-            type: 'system',
-            content: "Analüüs valmis",
-            timestamp: new Date()
-          });
-        }
+        addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'system',
+          content: "Analüüs valmis",
+          timestamp: new Date()
+        });
       } else {
         // Fallback if no output field
-        if (conversation?.messages) {
-          conversation.conversationState.addMessage({
-            id: `msg-${Date.now()}`,
-            type: 'system',
-            content: "Kuva lähetetty onnistuneesti",
-            timestamp: new Date()
-          });
-        }
+        addMessage({
+          id: `msg-${Date.now()}`,
+          type: 'system',
+          content: "Kuva lähetetty onnistuneesti",
+          timestamp: new Date()
+        });
       }
 
       toast({
@@ -214,14 +212,12 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
     } catch (error) {
       console.error('Photo processing failed:', error);
       
-      if (conversation?.messages) {
-        conversation.conversationState.addMessage({
-          id: `msg-${Date.now()}`,
-          type: 'system',
-          content: `Viga: Kuva analüüs epäonnistus - ${error instanceof Error ? error.message : "Tuntematon virhe"}`,
-          timestamp: new Date()
-        });
-      }
+      addMessage({
+        id: `msg-${Date.now()}`,
+        type: 'system',
+        content: `Viga: Kuva analüüs epäonnistus - ${error instanceof Error ? error.message : "Tuntematon virhe"}`,
+        timestamp: new Date()
+      });
       
       toast({
         title: "Lähetys epäonnistui",
@@ -230,10 +226,11 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       });
       resetFlow();
     }
-  }, [webhookUrl, offlineStorage, conversation]);
+  }, [webhookUrl, offlineStorage, addMessage]);
 
   const playAudioResponse = useCallback(async (audioData: string) => {
     try {
+      // Handle different audio data formats with better error handling
       let audioUrl = audioData;
       
       if (audioData.startsWith('data:audio/')) {
@@ -241,27 +238,54 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       } else if (audioData.startsWith('blob:')) {
         audioUrl = audioData;
       } else {
-        audioUrl = `data:audio/mpeg;base64,${audioData}`;
+        // Convert base64 to blob for better compatibility
+        try {
+          const binaryString = atob(audioData);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+          audioUrl = URL.createObjectURL(audioBlob);
+        } catch (decodeError) {
+          console.error('Failed to decode base64 audio:', decodeError);
+          throw new Error('Audio format not supported');
+        }
       }
       
       const audio = new Audio(audioUrl);
       
-      try {
-        await audio.play();
+      return new Promise<void>((resolve, reject) => {
+        audio.onended = () => {
+          if (audioUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(audioUrl);
+          }
+          resolve();
+        };
         
-        return new Promise<void>((resolve) => {
-          audio.onended = () => resolve();
-          audio.onerror = () => resolve();
-        });
-      } catch (autoplayError) {
-        console.warn('Autoplay blocked:', autoplayError);
-        toast({
-          title: "Paina kuunnellaksesi",
-          description: "Analyysi on valmis toistettavaksi"
-        });
-      }
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          if (audioUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(audioUrl);
+          }
+          reject(new Error('Audio playback failed'));
+        };
+        
+        audio.oncanplaythrough = () => {
+          audio.play().catch((playError) => {
+            console.error('Audio play failed:', playError);
+            if (audioUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(audioUrl);
+            }
+            reject(new Error('Audio play failed'));
+          });
+        };
+        
+        audio.load();
+      });
     } catch (error) {
-      console.error('Audio playback failed:', error);
+      console.error('Audio response failed:', error);
+      throw error;
     }
   }, []);
 

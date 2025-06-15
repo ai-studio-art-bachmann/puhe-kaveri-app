@@ -102,7 +102,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
         onClick={onPress}
         disabled={isDisabled}
         className={cn(
-          'w-24 h-24 rounded-full border-2 transition-all duration-200 shadow-sm hover:shadow-md',
+          'w-32 h-32 rounded-full border-2 transition-all duration-200 shadow-lg hover:shadow-xl',
           buttonState.bgColor,
           buttonState.borderColor,
           'hover:scale-105',
@@ -111,15 +111,15 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
         )}
         size="lg"
       >
-        <Mic className={cn('w-8 h-8', buttonState.iconColor)} />
+        <Mic className={cn('w-16 h-16', buttonState.iconColor)} />
       </Button>
       
-      <p className="text-sm font-medium text-gray-700 text-center max-w-xs">
+      <p className="text-base font-medium text-gray-700 text-center max-w-xs">
         {buttonState.text}
       </p>
       
       {voiceState.error && (
-        <p className="text-xs text-red-600 text-center max-w-xs px-2 py-1 bg-red-50 rounded border border-red-200">
+        <p className="text-sm text-red-600 text-center max-w-xs px-3 py-2 bg-red-50 rounded border border-red-200">
           {voiceState.error}
         </p>
       )}
