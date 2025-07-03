@@ -7,10 +7,47 @@ export const useCamera = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [currentOrientation, setCurrentOrientation] = useState<number>(0);
+
+  // Detect device orientation
+  const getDeviceOrientation = useCallback(() => {
+    if (screen.orientation) {
+      return screen.orientation.angle;
+    }
+    // Fallback for older browsers
+    return window.orientation || 0;
+  }, []);
+
+  // Handle orientation changes
+  const handleOrientationChange = useCallback(() => {
+    const orientation = getDeviceOrientation();
+    setCurrentOrientation(orientation);
+    console.log('Orientation changed to:', orientation);
+  }, [getDeviceOrientation]);
+
+  useEffect(() => {
+    // Listen for orientation changes
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', handleOrientationChange);
+    } else {
+      window.addEventListener('orientationchange', handleOrientationChange);
+    }
+
+    // Set initial orientation
+    setCurrentOrientation(getDeviceOrientation());
+
+    return () => {
+      if (screen.orientation) {
+        screen.orientation.removeEventListener('change', handleOrientationChange);
+      } else {
+        window.removeEventListener('orientationchange', handleOrientationChange);
+      }
+    };
+  }, [handleOrientationChange, getDeviceOrientation]);
 
   const open = useCallback(async () => {
     try {
-      // Sulge kõik olemasolevad vood enne uue avamist
+      // Close existing streams first
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => {
           track.stop();
@@ -19,14 +56,21 @@ export const useCamera = () => {
         streamRef.current = null;
         setIsOpen(false);
         
-        // Anna veidi aega kaamera sulgemiseks
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       console.log('Requesting camera access...');
       
-      // Proovi erinevaid seadeid
+      // Enhanced constraints for better mobile camera experience
       const constraints = [
+        { 
+          video: { 
+            facingMode: "environment",
+            width: { ideal: 1920, max: 4096 },
+            height: { ideal: 1080, max: 2160 },
+            aspectRatio: { ideal: 16/9 }
+          } 
+        },
         { 
           video: { 
             facingMode: "environment",
@@ -37,10 +81,11 @@ export const useCamera = () => {
         { 
           video: { 
             facingMode: "user",
-            width: { ideal: 640, max: 1280 },
-            height: { ideal: 480, max: 720 }
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
           } 
         },
+        { video: { facingMode: "environment" } },
         { video: true }
       ];
 
@@ -57,7 +102,6 @@ export const useCamera = () => {
           console.log('Failed with constraint:', constraint, error);
           lastError = error as Error;
           
-          // Kui kaamera on kasutuses, oota ja proovi uuesti
           if ((error as Error).name === 'NotReadableError') {
             console.log('Camera busy, waiting before retry...');
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -75,7 +119,6 @@ export const useCamera = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Oota video valmidust
         await new Promise<void>((resolve, reject) => {
           if (!videoRef.current) {
             reject(new Error('Video element not available'));
@@ -102,7 +145,6 @@ export const useCamera = () => {
           video.addEventListener('loadedmetadata', onLoadedMetadata);
           video.addEventListener('error', onError);
           
-          // Timeout kaitseks
           setTimeout(() => {
             if (!isOpen) {
               video.removeEventListener('loadedmetadata', onLoadedMetadata);
@@ -115,14 +157,12 @@ export const useCamera = () => {
     } catch (error) {
       console.error('Camera open failed:', error);
       
-      // Cleanup ebaõnnestumisel
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
       setIsOpen(false);
       
-      // Konkreetsed veateated
       let errorMessage = 'Kaamera ei käivitu';
       let description = 'Kontrolli kaamera õigusi';
       
@@ -159,33 +199,119 @@ export const useCamera = () => {
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      
-      // Optimize to max 1280px width
-      const aspectRatio = video.videoHeight / video.videoWidth;
-      const maxWidth = 1280;
-      const width = Math.min(video.videoWidth, maxWidth);
-      const height = width * aspectRatio;
-      
-      canvas.width = width;
-      canvas.height = height;
-      
       const context = canvas.getContext('2d');
+      
       if (!context) {
         reject(new Error('Canvas context not available'));
         return;
       }
+
+      // Get video dimensions
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
       
-      context.drawImage(video, 0, 0, width, height);
-      
+      console.log('Video dimensions:', videoWidth, 'x', videoHeight);
+      console.log('Current orientation:', currentOrientation);
+
+      // Determine canvas dimensions based on orientation
+      let canvasWidth: number;
+      let canvasHeight: number;
+      let rotation = 0;
+
+      // Calculate rotation based on device orientation
+      switch (currentOrientation) {
+        case 0: // Portrait
+          canvasWidth = Math.min(videoWidth, 1080);
+          canvasHeight = Math.min(videoHeight, 1920);
+          rotation = 0;
+          break;
+        case 90: // Landscape (rotated left)
+          canvasWidth = Math.min(videoHeight, 1920);
+          canvasHeight = Math.min(videoWidth, 1080);
+          rotation = -90;
+          break;
+        case -90: // Landscape (rotated right)
+        case 270:
+          canvasWidth = Math.min(videoHeight, 1920);
+          canvasHeight = Math.min(videoWidth, 1080);
+          rotation = 90;
+          break;
+        case 180: // Portrait upside down
+          canvasWidth = Math.min(videoWidth, 1080);
+          canvasHeight = Math.min(videoHeight, 1920);
+          rotation = 180;
+          break;
+        default:
+          // Auto-detect based on video aspect ratio
+          if (videoWidth > videoHeight) {
+            // Landscape video
+            canvasWidth = Math.min(videoWidth, 1920);
+            canvasHeight = Math.min(videoHeight, 1080);
+          } else {
+            // Portrait video
+            canvasWidth = Math.min(videoWidth, 1080);
+            canvasHeight = Math.min(videoHeight, 1920);
+          }
+          rotation = 0;
+      }
+
+      // Set canvas dimensions
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      // Clear canvas
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      // Apply rotation if needed
+      if (rotation !== 0) {
+        context.save();
+        
+        // Move to center for rotation
+        context.translate(canvasWidth / 2, canvasHeight / 2);
+        context.rotate((rotation * Math.PI) / 180);
+        
+        // Draw image centered
+        if (Math.abs(rotation) === 90) {
+          // For 90-degree rotations, swap width/height
+          context.drawImage(
+            video, 
+            -canvasHeight / 2, 
+            -canvasWidth / 2, 
+            canvasHeight, 
+            canvasWidth
+          );
+        } else {
+          context.drawImage(
+            video, 
+            -canvasWidth / 2, 
+            -canvasHeight / 2, 
+            canvasWidth, 
+            canvasHeight
+          );
+        }
+        
+        context.restore();
+      } else {
+        // No rotation needed
+        context.drawImage(video, 0, 0, canvasWidth, canvasHeight);
+      }
+
+      // Convert to blob with high quality
       canvas.toBlob((blob) => {
         if (blob) {
+          console.log('Photo captured:', {
+            size: blob.size,
+            dimensions: `${canvasWidth}x${canvasHeight}`,
+            orientation: currentOrientation,
+            rotation: rotation
+          });
           resolve(blob);
         } else {
           reject(new Error('Failed to create blob from canvas'));
         }
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.92);
     });
-  }, [isOpen]);
+  }, [isOpen, currentOrientation]);
 
   const close = useCallback(() => {
     if (streamRef.current) {
@@ -198,7 +324,6 @@ export const useCamera = () => {
     setIsOpen(false);
   }, []);
 
-  // Cleanup on unmount - fix: use useEffect instead of useState
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -211,6 +336,7 @@ export const useCamera = () => {
     videoRef,
     canvasRef,
     isOpen,
+    currentOrientation,
     open,
     capture,
     close

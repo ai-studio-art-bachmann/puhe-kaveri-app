@@ -61,6 +61,24 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({
     }
   };
 
+  // Get orientation description for user feedback
+  const getOrientationDescription = () => {
+    if (!flow.currentOrientation) return '';
+    
+    switch (flow.currentOrientation) {
+      case 0:
+        return 'Püstine asend';
+      case 90:
+      case -90:
+      case 270:
+        return 'Rõhtne asend';
+      case 180:
+        return 'Püstine asend (pea alaspidi)';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto space-y-6">
       {/* Camera View Card */}
@@ -81,7 +99,7 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({
               <img
                 src={URL.createObjectURL(flow.photoBlob)}
                 alt="Captured"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain bg-black"
               />
             )}
             {flow.step === 'idle' && (
@@ -90,6 +108,13 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({
                   <Camera size={48} className="mx-auto mb-3 opacity-50" />
                   <p className="text-sm">Kamera ei ole aktiivinen</p>
                 </div>
+              </div>
+            )}
+            
+            {/* Orientation indicator */}
+            {flow.step === 'camera' && flow.currentOrientation !== undefined && (
+              <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+                {getOrientationDescription()}
               </div>
             )}
           </div>
@@ -105,6 +130,11 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({
             <p className="font-medium text-slate-700">{getStepDescription()}</p>
             {flow.fileName && (
               <p className="text-sm text-slate-500">Tiedosto: {flow.fileName}.jpg</p>
+            )}
+            {flow.step === 'camera' && (
+              <p className="text-xs text-slate-400">
+                Hoia telefoni soovitud asendis ja vajuta pildistamiseks
+              </p>
             )}
             {!flow.isOnline && (
               <div className="flex items-center justify-center space-x-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
@@ -128,7 +158,7 @@ export const CameraVoiceFlow: React.FC<CameraVoiceFlowProps> = ({
         </Card>
       )}
 
-      {/* Action Buttons - reduced size by 20% and increased icon size by 20% */}
+      {/* Action Buttons */}
       {!showFilenameInput && (
         <div className="flex flex-col items-center space-y-4">
           {flow.step === 'idle' && (

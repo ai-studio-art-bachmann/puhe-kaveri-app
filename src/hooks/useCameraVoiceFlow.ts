@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useCamera } from './useCamera';
 import { useOfflineStorage } from './useOfflineStorage';
@@ -23,7 +22,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
   });
 
   const addMessage = useCallback((message: any) => {
-    // Safely add message if conversation is available
     if (conversation?.messages && typeof conversation.messages.push === 'function') {
       conversation.messages.push(message);
     }
@@ -34,11 +32,10 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       setState(prev => ({ ...prev, step: 'camera' }));
       await camera.open();
       
-      // Add system message to chat safely
       addMessage({
         id: `msg-${Date.now()}`,
         type: 'system',
-        content: "Kamera käivitatud - ota kuva",
+        content: "Kamera käivitatud - aseta telefon soovitud asendisse ja ota kuva",
         timestamp: new Date()
       });
     } catch (error) {
@@ -54,17 +51,17 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
 
   const capturePhoto = useCallback(async () => {
     try {
+      console.log('Capturing photo with orientation:', camera.currentOrientation);
       const blob = await camera.capture();
       
       setState(prev => ({ ...prev, step: 'captured', photoBlob: blob }));
       camera.close();
       
-      // Add user message with image to chat safely
       const imageUrl = URL.createObjectURL(blob);
       addMessage({
         id: `msg-${Date.now()}`,
         type: 'user',
-        content: "Kuva võetud",
+        content: `Kuva võetud (${camera.currentOrientation === 0 ? 'püstine' : 'rõhtne'} asend)`,
         fileUrl: imageUrl,
         fileType: "image/jpeg",
         timestamp: new Date()
@@ -86,7 +83,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
   const processPhotoWithFilename = useCallback(async (blob: Blob, fileName: string) => {
     setState(prev => ({ ...prev, step: 'processing', fileName }));
     
-    // Add system message to chat safely
     addMessage({
       id: `msg-${Date.now()}`,
       type: 'system',
@@ -96,7 +92,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
     
     try {
       if (!navigator.onLine) {
-        // Offline mode - save for later sync
         await offlineStorage.saveOffline(blob, fileName, false);
         
         addMessage({
@@ -114,7 +109,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         return;
       }
 
-      // Online mode - upload immediately
       const formData = new FormData();
       formData.append('file', blob, `${fileName}.jpg`);
       formData.append('filename', `${fileName}.jpg`);
@@ -136,7 +130,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         throw new Error(`N8N webhook error: ${response.status} ${response.statusText}`);
       }
 
-      // Handle response
       let data = null;
       const contentType = response.headers.get('content-type');
       
@@ -161,13 +154,11 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
         data = { success: true };
       }
       
-      // Handle the analysis response - fix the field mapping
       if (data && data.textResponse) {
         const analysisText = data.textResponse;
         
         console.log('Adding analysis to chat:', analysisText);
         
-        // Create the analysis message with proper typing
         const analysisMessage: any = {
           id: `msg-${Date.now()}`,
           type: 'assistant',
@@ -175,21 +166,18 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
           timestamp: new Date()
         };
 
-        // Add audio URL if provided
         if (data.audioResponse) {
           analysisMessage.audioUrl = `data:audio/mpeg;base64,${data.audioResponse}`;
         }
 
         addMessage(analysisMessage);
         
-        // Handle audio response if provided - with better error handling
         if (data.audioResponse) {
           setState(prev => ({ ...prev, step: 'playing' }));
           try {
             await playAudioResponse(data.audioResponse);
           } catch (audioError) {
             console.warn('Audio playback failed:', audioError);
-            // Continue without audio
           }
         }
         
@@ -200,7 +188,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
           timestamp: new Date()
         });
       } else {
-        // Fallback if no textResponse field
         addMessage({
           id: `msg-${Date.now()}`,
           type: 'system',
@@ -236,7 +223,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
 
   const playAudioResponse = useCallback(async (audioData: string) => {
     try {
-      // Handle different audio data formats with better error handling
       let audioUrl = audioData;
       
       if (audioData.startsWith('data:audio/')) {
@@ -244,7 +230,6 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       } else if (audioData.startsWith('blob:')) {
         audioUrl = audioData;
       } else {
-        // Convert base64 to blob for better compatibility
         try {
           const binaryString = atob(audioData);
           const bytes = new Uint8Array(binaryString.length);
@@ -309,6 +294,7 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
     ...state,
     videoRef: camera.videoRef,
     canvasRef: camera.canvasRef,
+    currentOrientation: camera.currentOrientation,
     startFlow,
     capturePhoto,
     processPhotoWithFilename,
