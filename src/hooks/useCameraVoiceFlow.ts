@@ -112,6 +112,10 @@ export const useCameraVoiceFlow = (webhookUrl: string, conversation: any) => {
       const formData = new FormData();
       formData.append('file', blob, `${fileName}.jpg`);
       formData.append('filename', `${fileName}.jpg`);
+      formData.append('filetype', 'image/jpeg');
+      formData.append('source', 'camera');
+      formData.append('orientation', camera.currentOrientation?.toString() || '0');
+      formData.append('timestamp', new Date().toISOString());
 
       console.log('Uploading photo to n8n webhook:', webhookUrl);
       console.log('Photo details:', {
