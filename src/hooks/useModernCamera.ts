@@ -126,67 +126,35 @@ export const useModernCamera = () => {
         return;
       }
 
-      // Get actual video stream dimensions
-      const videoWidth = video.videoWidth;
-      const videoHeight = video.videoHeight;
+      // Use the video element's display dimensions
+      const displayWidth = video.clientWidth;
+      const displayHeight = video.clientHeight;
       
-      if (videoWidth === 0 || videoHeight === 0) {
-        reject(new Error('Video not ready'));
+      if (displayWidth === 0 || displayHeight === 0) {
+        reject(new Error('Video element not visible'));
         return;
       }
 
-      // Get displayed video element dimensions
-      const displayedWidth = video.clientWidth;
-      const displayedHeight = video.clientHeight;
+      // Set canvas to match display dimensions
+      canvas.width = displayWidth;
+      canvas.height = displayHeight;
 
-      // Calculate the aspect ratios
-      const videoAspectRatio = videoWidth / videoHeight;
-      const displayAspectRatio = displayedWidth / displayedHeight;
+      // Clear and draw exactly what's visible
+      context.clearRect(0, 0, displayWidth, displayHeight);
+      context.drawImage(video, 0, 0, displayWidth, displayHeight);
 
-      let sourceX = 0;
-      let sourceY = 0;
-      let sourceWidth = videoWidth;
-      let sourceHeight = videoHeight;
-
-      // Calculate crop area to match what user sees (object-cover behavior)
-      if (videoAspectRatio > displayAspectRatio) {
-        // Video is wider than display - crop sides
-        sourceWidth = videoHeight * displayAspectRatio;
-        sourceX = (videoWidth - sourceWidth) / 2;
-      } else {
-        // Video is taller than display - crop top/bottom
-        sourceHeight = videoWidth / displayAspectRatio;
-        sourceY = (videoHeight - sourceHeight) / 2;
-      }
-
-      // Set canvas to match the displayed aspect ratio
-      const outputWidth = Math.max(displayedWidth, 1080); // Ensure good quality
-      const outputHeight = outputWidth / displayAspectRatio;
-      
-      canvas.width = outputWidth;
-      canvas.height = outputHeight;
-
-      // Clear and draw the cropped video frame
-      context.clearRect(0, 0, outputWidth, outputHeight);
-      context.drawImage(
-        video,
-        sourceX, sourceY, sourceWidth, sourceHeight, // Source crop area
-        0, 0, outputWidth, outputHeight // Destination full canvas
-      );
-
-      // Convert to high-quality JPEG
+      // Convert to JPEG
       canvas.toBlob((blob) => {
         if (blob) {
           console.log('Photo captured:', {
             size: blob.size,
-            dimensions: `${outputWidth}x${outputHeight}`,
-            cropped: `${sourceWidth}x${sourceHeight} from ${videoWidth}x${videoHeight}`
+            dimensions: `${displayWidth}x${displayHeight}`
           });
           resolve(blob);
         } else {
           reject(new Error('Failed to create photo blob'));
         }
-      }, 'image/jpeg', 0.95);
+      }, 'image/jpeg', 0.9);
     });
   }, [isActive]);
 
