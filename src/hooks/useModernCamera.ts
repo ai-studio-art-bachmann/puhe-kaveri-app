@@ -37,9 +37,19 @@ export const useModernCamera = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Set active immediately
-        setIsActive(true);
-        console.log('Camera is now active');
+        // Wait for video to be ready before setting active
+        videoRef.current.onloadedmetadata = () => {
+          setIsActive(true);
+          console.log('Camera is now active');
+        };
+        
+        // Fallback timeout in case onloadedmetadata doesn't fire
+        setTimeout(() => {
+          if (streamRef.current) {
+            setIsActive(true);
+            console.log('Camera activated via timeout fallback');
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error('Camera start failed:', error);
