@@ -67,33 +67,17 @@ export const useModernCamera = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Wait for video to be ready
-        await new Promise<void>((resolve, reject) => {
-          const video = videoRef.current!;
-          
-          const onReady = () => {
-            video.removeEventListener('loadedmetadata', onReady);
-            video.removeEventListener('error', onError);
-            setIsActive(true);
-            resolve();
-          };
-          
-          const onError = (event: Event) => {
-            video.removeEventListener('loadedmetadata', onReady);
-            video.removeEventListener('error', onError);
-            reject(new Error('Video loading failed'));
-          };
-          
-          video.addEventListener('loadedmetadata', onReady);
-          video.addEventListener('error', onError);
-          
-          // Timeout after 10 seconds
-          setTimeout(() => {
-            video.removeEventListener('loadedmetadata', onReady);
-            video.removeEventListener('error', onError);
-            reject(new Error('Camera initialization timeout'));
-          }, 10000);
-        });
+        // Set isActive immediately when stream is assigned
+        setIsActive(true);
+        
+        // Optional: Wait for video to be ready but don't block
+        videoRef.current.addEventListener('loadedmetadata', () => {
+          console.log('Video metadata loaded successfully');
+        }, { once: true });
+        
+        videoRef.current.addEventListener('error', (event) => {
+          console.error('Video error:', event);
+        }, { once: true });
       }
     } catch (error) {
       console.error('Camera start failed:', error);
