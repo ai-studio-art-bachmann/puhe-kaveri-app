@@ -13,84 +13,44 @@ export const useModernCamera = () => {
   const startCamera = useCallback(async () => {
     try {
       setError(null);
+      setIsActive(false);
       
       // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
-      // Enhanced constraints for modern smartphones
-      const constraints: CameraConstraints[] = [
-        {
-          video: {
-            facingMode: "environment", // Back camera preferred
-            width: { ideal: 1920, max: 4096 },
-            height: { ideal: 1080, max: 2160 },
-            aspectRatio: { ideal: 16/9 }
-          }
-        },
-        {
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        },
-        {
-          video: {
-            facingMode: "user" // Front camera fallback
-          }
-        },
-        {
-          video: true // Basic fallback
-        }
-      ];
-
-      let stream: MediaStream | null = null;
+      console.log('Starting camera...');
       
-      for (const constraint of constraints) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraint);
-          console.log('Camera started with constraint:', constraint);
-          break;
-        } catch (err) {
-          console.log('Failed with constraint:', constraint, err);
+      // Simple constraint that works
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
-      }
+      });
 
-      if (!stream) {
-        throw new Error('No camera access available');
-      }
-
+      console.log('Camera stream obtained');
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Set isActive immediately when stream is assigned
+        // Set active immediately
         setIsActive(true);
-        
-        // Optional: Wait for video to be ready but don't block
-        videoRef.current.addEventListener('loadedmetadata', () => {
-          console.log('Video metadata loaded successfully');
-        }, { once: true });
-        
-        videoRef.current.addEventListener('error', (event) => {
-          console.error('Video error:', event);
-        }, { once: true });
+        console.log('Camera is now active');
       }
     } catch (error) {
       console.error('Camera start failed:', error);
-      setError(error instanceof Error ? error.message : 'Camera failed to start');
+      setError('Kamera ei käynnisty');
       setIsActive(false);
       
       toast({
         title: "Kamera ei käynnisty",
-        description: "Tarkista kameran käyttöoikeudet ja yritä uudelleen",
+        description: "Tarkista kameran käyttöoikeudet",
         variant: "destructive"
       });
-      
-      throw error;
     }
   }, []);
 
