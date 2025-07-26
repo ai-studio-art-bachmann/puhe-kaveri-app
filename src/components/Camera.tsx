@@ -1,3 +1,3 @@
 
-// Re-export the refactored CameraContainer as Camera for backward compatibility
-export { CameraContainer as Camera } from './CameraContainer';
+// Modern camera implementation
+export { ModernCameraApp as Camera } from './ModernCameraApp';
