@@ -35,21 +35,26 @@ export const useModernCamera = () => {
       streamRef.current = stream;
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        // Wait for video to be ready before setting active
-        videoRef.current.onloadedmetadata = () => {
+        const video = videoRef.current;
+        video.srcObject = stream;
+
+        const onReady = () => {
           setIsActive(true);
           console.log('Camera is now active');
         };
-        
-        // Fallback timeout in case onloadedmetadata doesn't fire
-        setTimeout(() => {
-          if (streamRef.current) {
-            setIsActive(true);
-            console.log('Camera activated via timeout fallback');
-          }
-        }, 1000);
+
+        // Ensure playback starts on mobile Safari/iOS
+        video.onloadedmetadata = onReady;
+        // Some browsers fire canplay instead
+        video.oncanplay = onReady;
+        try {
+          await video.play();
+          onReady();
+        } catch (e) {
+          console.warn('video.play() failed, relying on events:', e);
+          // Fallback timeout in case events don't fire
+          setTimeout(onReady, 1200);
+        }
       }
     } catch (error) {
       console.error('Camera start failed:', error);

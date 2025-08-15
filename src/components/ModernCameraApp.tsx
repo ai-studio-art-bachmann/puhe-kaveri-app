@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useModernCamera } from '@/hooks/useModernCamera';
 import { ModernCameraView } from './ModernCameraView';
 import { FilenameInput } from './FilenameInput';
@@ -146,21 +147,24 @@ export const ModernCameraApp: React.FC<ModernCameraAppProps> = ({
 
   return (
     <>
-      <ModernCameraView
-        videoRef={camera.videoRef}
-        isActive={camera.isActive}
-        error={camera.error}
-        capturedImage={capturedImageUrl}
-        onCapture={handleCapture}
-        onRetake={handleRetake}
-        onClose={handleCloseCamera}
-        onSwitchCamera={camera.switchCamera}
-        isProcessing={isProcessing}
-      />
+      {createPortal(
+        <ModernCameraView
+          videoRef={camera.videoRef}
+          isActive={camera.isActive}
+          error={camera.error}
+          capturedImage={capturedImageUrl}
+          onCapture={handleCapture}
+          onRetake={handleRetake}
+          onClose={handleCloseCamera}
+          onSwitchCamera={camera.switchCamera}
+          isProcessing={isProcessing}
+        />,
+        document.body
+      )}
       
       <canvas ref={camera.canvasRef} className="hidden" />
       
-      {showFilenameInput && (
+      {showFilenameInput && createPortal(
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold mb-4 text-center">
@@ -171,7 +175,8 @@ export const ModernCameraApp: React.FC<ModernCameraAppProps> = ({
               onCancel={handleFilenameCancel}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
