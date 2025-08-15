@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useModernCamera } from '@/hooks/useModernCamera';
 import { ModernCameraView } from './ModernCameraView';
@@ -25,14 +25,16 @@ export const ModernCameraApp: React.FC<ModernCameraAppProps> = ({
   const [showFilenameInput, setShowFilenameInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleOpenCamera = useCallback(async () => {
-    try {
-      setIsOpen(true);
-      await camera.startCamera();
-    } catch (error) {
-      setIsOpen(false);
+  // Start camera only after the overlay is mounted so videoRef exists
+  useEffect(() => {
+    if (isOpen) {
+      camera.startCamera();
     }
-  }, [camera]);
+  }, [isOpen]);
+
+  const handleOpenCamera = useCallback(() => {
+    setIsOpen(true);
+  }, []);
 
   const handleCloseCamera = useCallback(() => {
     camera.stopCamera();
