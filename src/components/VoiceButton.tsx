@@ -131,7 +131,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
           style={{ width: '6.5rem', height: '6.5rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
-            <Mic size={48} className={buttonState.iconColor} />
+            <Mic size={144} className={buttonState.iconColor} />
             <span className="text-sm font-medium text-white">Ääni</span>
           </div>
         </Button>
