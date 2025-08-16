@@ -1,0 +1,36 @@
+{
+  "actions": {
+    "openCamera": "Open Camera",
+    "capture": "Take Photo",
+    "switchCamera": "Switch Camera",
+    "close": "Close",
+    "retry": "Try Again"
+  },
+  "states": {
+    "opening": "Opening camera...",
+    "capturing": "Capturing image..."
+  },
+  "errors": {
+    "title": "Camera Error",
+    "noCamera": "No camera found on this device.",
+    "deviceInit": "Failed to initialize camera devices.",
+    "videoElement": "Video element not available.",
+    "permissionDenied": "Camera access was denied. Please check your browser permissions.",
+    "cameraAccess": "Could not access the camera. Please try again.",
+    "canvasContext": "Could not get canvas context.",
+    "imageCapture": "Failed to capture image.",
+    "captureFailed": "Failed to capture image. Please try again."
+  },
+  "instructions": {
+    "initial": "Point the camera at the subject and press the capture button.",
+    "permission": "Please allow camera access to use this feature."
+  },
+  "labels": {
+    "cameraPreview": "Camera preview"
+  },
+  "aria": {
+    "cameraReady": "Camera is ready for use.",
+    "capturing": "Capturing image...",
+    "error": "An error occurred with the camera."
+  }
+}

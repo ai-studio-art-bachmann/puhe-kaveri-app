@@ -1,0 +1,36 @@
+{
+  "actions": {
+    "openCamera": "Avaa kaamera",
+    "capture": "Tee pilt",
+    "switchCamera": "Vaheta kaamerat",
+    "close": "Sulge",
+    "retry": "Proovi uuesti"
+  },
+  "states": {
+    "opening": "Kaamera avamine...",
+    "capturing": "Pildistamine..."
+  },
+  "errors": {
+    "title": "Kaamera viga",
+    "noCamera": "Seadmest ei leitud kaamerat.",
+    "deviceInit": "Kaamera seadmete lähtestamine ebaõnnestus.",
+    "videoElement": "Videokomponenti ei leitud.",
+    "permissionDenied": "Kaamera kasutamine keelati. Palun kontrolli oma brauseri seadeid.",
+    "cameraAccess": "Kaemarale juurdepääs ebaõnnestus. Palun proovi uuesti.",
+    "canvasContext": "Joonistuspinna konteksti hankimine ebaõnnestus.",
+    "imageCapture": "Pildi salvestamine ebaõnnestus.",
+    "captureFailed": "Pildistamine ebaõnnestus. Palun proovi uuesti."
+  },
+  "instructions": {
+    "initial": "Suuna kaamerat objekti poole ja vajuta pildistusnupule.",
+    "permission": "Selle funktsiooni kasutamiseks luba kaemarakasutamine."
+  },
+  "labels": {
+    "cameraPreview": "Kaamera eelvaade"
+  },
+  "aria": {
+    "cameraReady": "Kaamera on kasutusvalmis.",
+    "capturing": "Pildistamine...",
+    "error": "Kaameraga tekkis viga."
+  }
+}

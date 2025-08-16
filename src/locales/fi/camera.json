@@ -1,0 +1,36 @@
+{
+  "actions": {
+    "openCamera": "Avaa kamera",
+    "capture": "Ota kuva",
+    "switchCamera": "Vaihda kameraa",
+    "close": "Sulje",
+    "retry": "Yritä uudelleen"
+  },
+  "states": {
+    "opening": "Avataan kameraa...",
+    "capturing": "Otetaan kuvaa..."
+  },
+  "errors": {
+    "title": "Kameravirhe",
+    "noCamera": "Laitteesta ei löytynyt kameraa.",
+    "deviceInit": "Kameran laitteiden alustus epäonnistui.",
+    "videoElement": "Videokomponenttia ei löydy.",
+    "permissionDenied": "Kameran käyttöoikeus evättiin. Tarkista selaimen asetukset.",
+    "cameraAccess": "Kameran käyttö ei onnistunut. Yritä uudelleen.",
+    "canvasContext": "Piirtoalustan kontekstin haku epäonnistui.",
+    "imageCapture": "Kuvan tallennus epäonnistui.",
+    "captureFailed": "Kuvan ottaminen epäonnistui. Yritä uudelleen."
+  },
+  "instructions": {
+    "initial": "Suuntaa kamera kohteeseen ja paina kuvauspainiketta.",
+    "permission": "Anna kameran käyttöoikeus käyttääksesi tätä ominaisuutta."
+  },
+  "labels": {
+    "cameraPreview": "Kameran esikatselu"
+  },
+  "aria": {
+    "cameraReady": "Kamera on käytettävissä.",
+    "capturing": "Otetaan kuvaa...",
+    "error": "Kamerassa tapahtui virhe."
+  }
+}

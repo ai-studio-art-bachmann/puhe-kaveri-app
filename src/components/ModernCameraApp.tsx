@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+
 import { useModernCamera } from '@/hooks/useModernCamera';
 import { ModernCameraView } from './ModernCameraView';
 import { FilenameInput } from './FilenameInput';
@@ -126,60 +126,61 @@ export const ModernCameraApp: React.FC<ModernCameraAppProps> = ({
     handleRetake();
   }, [handleRetake]);
 
-  // Camera trigger button when not open
-  if (!isOpen) {
-    return (
-      <div className="flex flex-col items-center space-y-4 p-4">
-        <Button
-          onClick={handleOpenCamera}
-          size="lg"
-          className="w-full h-16 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg"
-        >
-          <div className="flex items-center space-x-3">
-            <Camera size={24} />
-            <span className="text-lg font-medium">Avaa kamera</span>
-          </div>
-        </Button>
-        <p className="text-sm text-muted-foreground text-center">
-          Ota kuvia ja analysoi niitä älykkäästi
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <>
-      {createPortal(
-        <ModernCameraView
-          videoRef={camera.videoRef}
-          isActive={camera.isActive}
-          error={camera.error}
-          capturedImage={capturedImageUrl}
-          onCapture={handleCapture}
-          onRetake={handleRetake}
-          onClose={handleCloseCamera}
-          onSwitchCamera={camera.switchCamera}
-          isProcessing={isProcessing}
-        />,
-        document.body
+    <div className="w-full max-w-md mx-auto">
+      {/* Trigger button when not open */}
+      {!isOpen && (
+        <div className="flex flex-col items-center space-y-4 p-4">
+          <Button
+            onClick={handleOpenCamera}
+            size="lg"
+            className="w-full h-16 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg"
+          >
+            <div className="flex items-center space-x-3">
+              <Camera size={24} />
+              <span className="text-lg font-medium">Avaa kamera</span>
+            </div>
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            Ota kuvia ja analysoi niitä älykkäästi
+          </p>
+        </div>
       )}
-      
-      <canvas ref={camera.canvasRef} className="hidden" />
-      
-      {showFilenameInput && createPortal(
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4 text-center">
-              Anna kuvalle nimi
-            </h3>
-            <FilenameInput
-              onSubmit={handleFilenameSubmit}
-              onCancel={handleFilenameCancel}
-            />
-          </div>
-        </div>,
-        document.body
+
+      {/* Inline camera panel */}
+      {isOpen && (
+        <div className="relative">
+          <ModernCameraView
+            videoRef={camera.videoRef}
+            isActive={camera.isActive}
+            error={camera.error}
+            capturedImage={capturedImageUrl}
+            onCapture={handleCapture}
+            onRetake={handleRetake}
+            onClose={handleCloseCamera}
+            onSwitchCamera={camera.switchCamera}
+            isProcessing={isProcessing}
+          />
+
+          {/* Hidden canvas for capture */}
+          <canvas ref={camera.canvasRef} className="hidden" />
+
+          {/* Filename modal scoped to this component */}
+          {showFilenameInput && (
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-10">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+                <h3 className="text-lg font-semibold mb-4 text-center">
+                  Anna kuvalle nimi
+                </h3>
+                <FilenameInput
+                  onSubmit={handleFilenameSubmit}
+                  onCancel={handleFilenameCancel}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       )}
-    </>
+    </div>
   );
 };
