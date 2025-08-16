@@ -83,6 +83,7 @@ export function CameraPanel({ onCapture, className = '', isActive = true }: Came
         }
         // Try requested facing mode
         attempts.push({ video: { facingMode }, audio: false });
+        
         // Fallbacks
         attempts.push({ video: { facingMode: { ideal: 'environment' } }, audio: false });
         attempts.push({ video: { facingMode: { ideal: 'user' } }, audio: false });
