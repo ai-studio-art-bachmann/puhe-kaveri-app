@@ -21,8 +21,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
       bgColor: 'bg-orange-500',
       hoverColor: 'hover:bg-orange-600',
       iconColor: 'text-white',
-      pulse: true,
-      animation: 'animate-[pulse_3s_ease-in-out_infinite]' // Ultra slow pulse
+      pulse: true
     };
   }
 
@@ -33,8 +32,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-slate-800',
         hoverColor: 'hover:bg-slate-700',
         iconColor: 'text-white',
-        pulse: false,
-        animation: ''
+        pulse: false
       };
     case 'greeting':
       return {
@@ -42,8 +40,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-blue-600',
         hoverColor: 'hover:bg-blue-700',
         iconColor: 'text-white',
-        pulse: true,
-        animation: 'animate-[pulse_3s_ease-in-out_infinite]'
+        pulse: true
       };
     case 'recording':
       return {
@@ -51,8 +48,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-red-600',
         hoverColor: 'hover:bg-red-700',
         iconColor: 'text-white',
-        pulse: true,
-        animation: 'animate-[pulse_3s_ease-in-out_infinite]'
+        pulse: true
       };
     case 'sending':
       return {
@@ -60,8 +56,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-yellow-600',
         hoverColor: 'hover:bg-yellow-700',
         iconColor: 'text-white',
-        pulse: false,
-        animation: ''
+        pulse: false
       };
     case 'waiting':
       return {
@@ -69,8 +64,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-blue-600',
         hoverColor: 'hover:bg-blue-700',
         iconColor: 'text-white',
-        pulse: true,
-        animation: 'animate-[pulse_3s_ease-in-out_infinite]'
+        pulse: true
       };
     case 'playing':
       return {
@@ -78,8 +72,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-green-600',
         hoverColor: 'hover:bg-green-700',
         iconColor: 'text-white',
-        pulse: false,
-        animation: ''
+        pulse: false
       };
     default:
       return {
@@ -87,8 +80,7 @@ const getButtonState = (status: VoiceState['status'], isWaitingForClick: boolean
         bgColor: 'bg-slate-800',
         hoverColor: 'hover:bg-slate-700',
         iconColor: 'text-white',
-        pulse: false,
-        animation: ''
+        pulse: false
       };
   }
 };
@@ -132,14 +124,14 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             buttonState.bgColor,
             buttonState.hoverColor,
             'hover:scale-105 active:scale-95',
-            buttonState.pulse && 'animate-pulse',
+            buttonState.pulse && 'motion-safe:animate-slow-pulse', // ← vaihdettu oikein nimetylle animaatiolle
             isDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
           )}
           style={{ width: '6.5rem', height: '6.5rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
-            <Mic size={144} className={buttonState.iconColor} />
-            <span className="text-sm font-medium text-white">Ääni</span>
+          <Mic style={{ width: "28px", height: "28px" }} className={buttonState.iconColor} />
+          <span className="text-sm font-medium text-white">Ääni</span>
           </div>
         </Button>
       </div>
