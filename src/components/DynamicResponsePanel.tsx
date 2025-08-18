@@ -22,8 +22,8 @@ export const DynamicResponsePanel: React.FC<DynamicResponsePanelProps> = ({
 
   return (
     <div 
-      className="flex-1 overflow-y-auto px-4 py-6 bg-muted/30"
-      style={{ maxHeight: 'calc(100vh - 300px)' }}
+      className="flex-1 w-full overflow-y-auto overflow-x-hidden px-4 py-6 bg-muted/30 min-w-0"
+      style={{ maxHeight: 'calc(100vh - 300px)', scrollbarGutter: 'stable' }}
     >
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -32,9 +32,11 @@ export const DynamicResponsePanel: React.FC<DynamicResponsePanelProps> = ({
           </p>
         </div>
       ) : (
-        <div className="space-y-3 pb-4">
+        <div className="space-y-3 pb-4 w-full max-w-full break-words whitespace-pre-wrap min-w-0">
           {messages.map((message) => (
-            <ChatBubble key={message.id} message={message} />
+            <div key={message.id} className="w-full max-w-full min-w-0">
+              <ChatBubble message={message} />
+            </div>
           ))}
           <div ref={endRef} />
         </div>
