@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -133,13 +132,13 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             buttonState.bgColor,
             buttonState.hoverColor,
             'hover:scale-105 active:scale-95',
-            buttonState.animation, // Use custom animation instead of animate-pulse
+            buttonState.pulse && 'animate-pulse',
             isDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
           )}
           style={{ width: '6.5rem', height: '6.5rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
-            <Mic size={192} className={buttonState.iconColor} />
+            <Mic size={144} className={buttonState.iconColor} />
             <span className="text-sm font-medium text-white">Ääni</span>
           </div>
         </Button>
